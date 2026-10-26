@@ -955,10 +955,14 @@ bool is_nax_available() {
       can_use_nax = true;
     }
     auto& d = metal::device(mlx::core::Device::gpu);
+    auto arch = d.get_architecture().back();
     auto gen = d.get_architecture_gen();
-    // Generation 17 advertises NAX support, but produces incorrect results for
-    // some low-bit affine quantized matrix-vector shapes.
-    can_use_nax &= gen >= 18;
+    // Upstream rule (ml-explore/mlx): generation 17 desktop/laptop GPUs (M5)
+    // use NAX; phones wait for generation 18. The fork's gen >= 18 gate from
+    // July 2026 predates the upstream NAX qmm fixes it merged in August; the
+    // fp16 GEMM and affine-Q8 shapes it guarded are covered by
+    // NAXGateRegressionTests against a CPU reference.
+    can_use_nax &= gen >= (arch == 'p' ? 18 : 17);
     return can_use_nax;
   };
   static bool is_nax_available_ = _check_nax();
